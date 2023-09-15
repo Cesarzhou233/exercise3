@@ -1,0 +1,77 @@
+import nltk
+from nltk.corpus import stopwords, gutenberg
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.probability import FreqDist
+from nltk.stem import WordNetLemmatizer
+from nltk.sentiment import SentimentIntensityAnalyzer
+import matplotlib.pyplot as plt
+
+# Download NLTK data (if not already downloaded)
+nltk.download("punkt")
+nltk.download("stopwords")
+nltk.download("averaged_perceptron_tagger")
+nltk.download("wordnet")
+nltk.download("gutenberg")
+nltk.download("vader_lexicon")
+
+moby_dick_text = gutenberg.raw("melville-moby_dick.txt")
+# 1. Tokenization
+tokens = word_tokenize(moby_dick_text)
+
+# 2. Stop-words filtering
+stop_words = set(stopwords.words("english"))
+filtered_tokens = [token for token in tokens if token.lower() not in stop_words]
+
+# 3. Parts-of-Speech (POS) tagging
+tagged_tokens = nltk.pos_tag(filtered_tokens)
+
+# 4. POS frequency
+pos_freq = FreqDist(tag for word, tag in tagged_tokens)
+common_pos = pos_freq.most_common(5)
+print(common_pos)
+
+# Lemmatization function
+def lemmatize_with_pos(token, pos):
+    lemmatizer = WordNetLemmatizer()
+    if pos.startswith('N'):
+        return lemmatizer.lemmatize(token, pos='n')
+    elif pos.startswith('V'):
+        return lemmatizer.lemmatize(token, pos='v')
+    elif pos.startswith('R'):
+        return lemmatizer.lemmatize(token, pos='r')
+    elif pos.startswith('J'):
+        return lemmatizer.lemmatize(token, pos='a')
+    else:
+        return lemmatizer.lemmatize(token)
+
+# 5. Lemmatization
+word_tagged_tokens = [(token, tag) for token, tag in tagged_tokens if token.isalpha()]
+lemmatized_top_20_words = [lemmatize_with_pos(token, tag) for token, tag in word_tagged_tokens[:20]]
+print(lemmatized_top_20_words)
+
+# 6. Plotting frequency distribution
+plt.figure(figsize=(15, 7))
+plt.bar(list(pos_freq.keys()), list(pos_freq.values()), color='skyblue')
+plt.xlabel('Parts of Speech')
+plt.ylabel('Frequency')
+plt.title('Frequency Distribution of Parts of Speech in Moby Dick')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Bonus: Sentiment Analysis
+# Create an instance of Sentiment Intensity Analyzer
+sia = SentimentIntensityAnalyzer()
+
+# Splitting the text into sentences for a more granular analysis
+sentences_from_tokens = sent_tokenize(" ".join(filtered_tokens))
+
+# Analyzing sentiment for each sentence
+sentiment_scores_from_tokens = [sia.polarity_scores(sentence)['compound'] for sentence in sentences_from_tokens]
+
+# Calculating the average sentiment score from the filtered tokens
+average_sentiment_from_tokens = sum(sentiment_scores_from_tokens) / len(sentiment_scores_from_tokens)
+overall_sentiment_from_tokens = "positive" if average_sentiment_from_tokens > 0.05 else "negative"
+
+print(f"Average Sentiment Score from Tokens: {average_sentiment_from_tokens}")
+print(f"Overall Sentiment from Tokens: {overall_sentiment_from_tokens}")
